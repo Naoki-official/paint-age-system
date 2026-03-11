@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>塗料年齢ダッシュボード | Paint Age Monitor</title>
+    <meta name="description" content="塗装工場の配管内塗料の劣化具合をリアルタイムで可視化するダッシュボード（20系統対応）">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+
+    <!-- サイドバー: 系統リスト -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <div class="logo-icon">🎨</div>
+                <h1>Paint Age</h1>
+            </div>
+            <div class="subtitle">配管系統モニタリング</div>
+        </div>
+        <div class="sidebar-search">
+            <input type="text" id="lineSearch" placeholder="系統を検索...">
+        </div>
+        <div class="line-list" id="lineList">
+            <!-- JS で動的生成 -->
+        </div>
+    </aside>
+
+    <!-- メインコンテンツ -->
+    <div class="main-content">
+
+        <!-- トップバー -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <h2 id="currentLineName">ライン 1</h2>
+                <span class="badge" id="dataModeBadge">CSV Mode</span>
+            </div>
+            <div class="topbar-right">
+                <span id="lastUpdated">更新中...</span>
+            </div>
+        </header>
+
+        <!-- ダッシュボードエリア -->
+        <main class="dashboard">
+
+            <!-- ステータスカード -->
+            <div class="stats-row">
+                <div class="stat-card blue" id="cardRobotAge">
+                    <div class="label">ロボット到達年齢</div>
+                    <div class="value"><span id="valRobotAge">--</span><span class="unit">H</span></div>
+                    <div class="detail">配管先端（最古バッチ）</div>
+                </div>
+                <div class="stat-card purple" id="cardPipeAge">
+                    <div class="label">配管内平均年齢</div>
+                    <div class="value"><span id="valPipeAge">--</span><span class="unit">H</span></div>
+                    <div class="detail" id="detailPipeAge">配管 200L の加重平均</div>
+                </div>
+                <div class="stat-card green" id="cardTankLevel">
+                    <div class="label">タンク液面レベル</div>
+                    <div class="value"><span id="valTankLevel">--</span><span class="unit">%</span></div>
+                    <div class="gauge-row">
+                        <span class="gauge-label">タンク</span>
+                        <div class="gauge-bar">
+                            <div class="gauge-fill" id="tankGaugeFill" style="width:0%; background: linear-gradient(90deg, #22c55e, #10b8d6);"></div>
+                        </div>
+                    </div>
+                    <div class="gauge-row">
+                        <span class="gauge-label">配管</span>
+                        <div class="gauge-bar">
+                            <div class="gauge-fill" id="pipeGaugeFill" style="width:0%; background: linear-gradient(90deg, #8b5cf6, #4f7cff);"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card orange" id="cardBatches">
+                    <div class="label">バッチ数</div>
+                    <div class="value">
+                        <span id="valTankBatches">--</span>
+                        <span class="unit" style="margin-right:8px">タンク</span>
+                        <span id="valPipeBatches">--</span>
+                        <span class="unit">配管</span>
+                    </div>
+                    <div class="detail">タンク内 + 配管内のロット数</div>
+                </div>
+            </div>
+
+            <!-- コントロール -->
+            <div class="controls-row">
+                <div class="section-title">📈 年齢推移（2段FIFOモデル）</div>
+                <div class="time-range-selector" id="timeRangeSelector">
+                    <button class="time-btn" data-hours="1">1H</button>
+                    <button class="time-btn active" data-hours="6">6H</button>
+                    <button class="time-btn" data-hours="12">12H</button>
+                    <button class="time-btn" data-hours="24">24H</button>
+                    <button class="time-btn" data-hours="168">7D</button>
+                    <button class="time-btn" data-hours="720">30D</button>
+                </div>
+            </div>
+
+            <!-- チャート -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">
+                            <span class="dot dot-blue"></span>
+                            塗料年齢推移
+                        </div>
+                        <div class="chart-legend">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #ef4565;"></div>
+                                ロボット到達年齢
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #8b5cf6;"></div>
+                                配管内平均
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #4f7cff;"></div>
+                                タンク内平均
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #10b8d6; border-top: 1px dashed #10b8d6;"></div>
+                                移動平均
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrapper">
+                        <canvas id="ageChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">
+                            <span class="dot dot-green"></span>
+                            タンク液面レベル
+                        </div>
+                        <div class="chart-legend">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #22c55e;"></div>
+                                液面レベル (%)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrapper">
+                        <canvas id="levelChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
