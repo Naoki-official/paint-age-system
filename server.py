@@ -92,8 +92,12 @@ def calculate_paint_age_2stage(
     batches_tank = deque()  # (volume_L, injection_timestamp)
     batches_pipe = deque()  # (volume_L, injection_timestamp)
     current_level_l = 0.0   # タンク残量 (L)
-    pipe_total = 0.0        # 配管内総量 (L)
+    pipe_total = pipe_capacity        # 配管内総量 (L)
     results = []
+
+    if sensor_data and pipe_capacity > 0:
+        first_ts = sensor_data[0]["timestamp"]
+        batches_pipe.append((pipe_capacity, first_ts))
 
     for event in sensor_data:
         ts = event["timestamp"]
@@ -179,6 +183,8 @@ def calculate_paint_age_2stage(
             "tank_batches": len(batches_tank),
             "pipe_batches": len(batches_pipe),
             "pipe_fill_pct": round((pipe_vol_total / pipe_capacity) * 100, 1) if pipe_capacity > 0 else 0,
+            "tank_deque": [{"v": round(b[0], 2), "a": round((ts - b[1]).total_seconds() / 3600, 2)} for b in batches_tank],
+            "pipe_deque": [{"v": round(b[0], 2), "a": round((ts - b[1]).total_seconds() / 3600, 2)} for b in batches_pipe]
         })
 
         current_level_l = new_level_l

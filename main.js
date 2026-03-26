@@ -148,24 +148,52 @@ function updateStatCards(data) {
     const level = latest.level;
     document.getElementById('valTankLevel').textContent = level.toFixed(1);
 
-    // タンクゲージ
-    const tankGauge = document.getElementById('tankGaugeFill');
-    tankGauge.style.width = `${Math.min(100, level)}%`;
-    if (level < 30) {
-        tankGauge.style.background = 'linear-gradient(90deg, #ef4565, #f5842a)';
-    } else if (level < 50) {
-        tankGauge.style.background = 'linear-gradient(90deg, #f5842a, #facc15)';
-    } else {
-        tankGauge.style.background = 'linear-gradient(90deg, #22c55e, #10b8d6)';
-    }
-
-    // 配管ゲージ
-    const pipeGauge = document.getElementById('pipeGaugeFill');
-    pipeGauge.style.width = `${Math.min(100, latest.pipe_fill_pct)}%`;
+    // デキューの可視化 (スタック・セグメント・バー)
+    const tankCapacity = 50.0;
+    const pipeCapacity = 200.0;
+    
+    // tank_dequeがなければ空配列フォールバック
+    const tankDeque = latest.tank_deque || [];
+    const pipeDeque = latest.pipe_deque || [];
+    
+    renderDequeGauge('tankGaugeContainer', tankDeque, tankCapacity);
+    renderDequeGauge('pipeGaugeContainer', pipeDeque, pipeCapacity);
 
     // バッチ数
     document.getElementById('valTankBatches').textContent = latest.tank_batches;
     document.getElementById('valPipeBatches').textContent = latest.pipe_batches;
+}
+
+function renderDequeGauge(containerId, deque, capacity) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    deque.forEach(batch => {
+        const pct = (batch.v / capacity) * 100;
+        const color = getAgeColor(batch.a);
+        
+        const segment = document.createElement('div');
+        segment.className = 'gauge-segment';
+        segment.style.width = `${pct}%`;
+        segment.style.backgroundColor = color;
+        segment.title = `体積: ${batch.v.toFixed(1)} L\n年齢: ${batch.a.toFixed(1)} H`;
+        
+        container.appendChild(segment);
+    });
+}
+
+function getAgeColor(ageHours) {
+    // 古さの表現: 青(0H: 新) -> 緑 -> 黄 -> 橙 -> 赤(24H: 古) -> 紫(>24H: 激古)
+    const clamped = Math.min(ageHours, 24);
+    let hue;
+    if (ageHours > 24) {
+        hue = 280; // Purple
+    } else {
+        hue = 220 - (clamped / 24) * 220;
+    }
+    return `hsl(${hue}, 85%, 55%)`;
 }
 
 // === メタ情報 ===
