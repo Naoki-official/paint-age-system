@@ -436,16 +436,6 @@ body {
     background: var(--bg-primary);
     border-radius: 3px;
     overflow: hidden;
-    display: flex;
-}
-
-.gauge-segment {
-    height: 100%;
-    transition: width 0.4s ease, background-color 0.4s ease;
-}
-
-.gauge-segment:hover {
-    filter: brightness(1.15);
 }
 
 .gauge-fill {

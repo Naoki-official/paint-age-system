@@ -62,14 +62,14 @@
                     <div class="value"><span id="valTankLevel">--</span><span class="unit">%</span></div>
                     <div class="gauge-row">
                         <span class="gauge-label">タンク</span>
-                        <div class="gauge-bar" id="tankGaugeContainer">
-                            <!-- JS で各バッチのセグメントを動的生成 -->
+                        <div class="gauge-bar">
+                            <div class="gauge-fill" id="tankGaugeFill" style="width:0%; background: linear-gradient(90deg, #22c55e, #10b8d6);"></div>
                         </div>
                     </div>
                     <div class="gauge-row">
                         <span class="gauge-label">配管</span>
-                        <div class="gauge-bar" id="pipeGaugeContainer">
-                            <!-- JS で各バッチのセグメントを動的生成 -->
+                        <div class="gauge-bar">
+                            <div class="gauge-fill" id="pipeGaugeFill" style="width:0%; background: linear-gradient(90deg, #8b5cf6, #4f7cff);"></div>
                         </div>
                     </div>
                 </div>
